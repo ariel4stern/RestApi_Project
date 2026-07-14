@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NeuralOrbit — Access</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Rajdhani:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #020510;
+    --panel: rgba(6,14,40,0.85);
+    --border: rgba(80,160,255,0.18);
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --glow: rgba(59,130,246,0.35);
+    --text: #e2eeff;
+    --muted: #7090b8;
+    --success: #22d3a0;
+    --error: #f87171;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Rajdhani',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+  #stars-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
+  .nebula{position:fixed;border-radius:50%;filter:blur(80px);opacity:.18;pointer-events:none;z-index:0;}
+  .nebula-1{width:500px;height:500px;background:radial-gradient(circle,#1e40af,transparent);top:-80px;left:-120px;}
+  .nebula-2{width:400px;height:400px;background:radial-gradient(circle,#0e7490,transparent);bottom:-100px;right:-100px;}
+  .nebula-3{width:300px;height:300px;background:radial-gradient(circle,#7c3aed,transparent);top:50%;left:60%;}
+
+  .card{
+    position:relative;z-index:10;
+    width:420px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:42px 40px 36px;
+    box-shadow:0 0 60px var(--glow), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    backdrop-filter:blur(18px);
+    animation:cardIn .6s cubic-bezier(.22,.68,0,1.2) both;
+  }
+  @keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+
+  .logo{text-align:center;margin-bottom:28px;}
+  .logo-icon{
+    width:52px;height:52px;margin:0 auto 10px;border-radius:50%;
+    background:conic-gradient(from 0deg,#3b82f6,#06b6d4,#7c3aed,#3b82f6);
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    animation:spinOrbit 8s linear infinite;box-shadow:0 0 24px var(--glow);
+  }
+  @keyframes spinOrbit{to{filter:hue-rotate(360deg);}}
+  .logo h1{
+    font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:900;letter-spacing:.08em;
+    background:linear-gradient(90deg,#93c5fd,#22d3ee);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .logo p{font-size:.78rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:3px;}
+
+  .tabs{display:flex;gap:4px;background:rgba(0,0,0,.3);border-radius:10px;padding:4px;margin-bottom:28px;}
+  .tab-btn{
+    flex:1;padding:9px 0;border:none;background:transparent;color:var(--muted);
+    font-family:'Orbitron',sans-serif;font-size:.68rem;letter-spacing:.1em;
+    border-radius:7px;cursor:pointer;transition:all .25s;
+  }
+  .tab-btn.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 0 14px var(--glow);}
+
+  .form-group{margin-bottom:16px;}
+  label{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  input{
+    width:100%;padding:11px 14px;
+    background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:9px;
+    color:var(--text);font-family:'Rajdhani',sans-serif;font-size:1rem;
+    outline:none;transition:border-color .2s,box-shadow .2s;
+  }
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+  input::placeholder{color:rgba(112,144,184,.4);}
+
+  .btn{
+    width:100%;padding:13px;border:none;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.12em;
+    cursor:pointer;margin-top:6px;
+    transition:opacity .2s,transform .15s,box-shadow .2s;
+    box-shadow:0 0 20px var(--glow);position:relative;overflow:hidden;
+  }
+  .btn:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 0 30px var(--glow);}
+  .btn:active{transform:scale(.98);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .btn .btn-inner{display:flex;align-items:center;justify-content:center;gap:8px;}
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .btn.loading .spinner{display:block;}
+  .btn.loading .btn-text{opacity:.6;}
+
+  #toast{
+    position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-80px);
+    z-index:9999;padding:12px 22px;border-radius:10px;
+    font-family:'Rajdhani',sans-serif;font-size:.95rem;letter-spacing:.04em;font-weight:500;
+    min-width:260px;text-align:center;
+    transition:transform .4s cubic-bezier(.22,.68,0,1.2),opacity .3s;
+    opacity:0;display:flex;align-items:center;gap:10px;justify-content:center;
+  }
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+  #toast.success{background:rgba(6,40,30,.9);border:1px solid var(--success);color:var(--success);}
+  #toast.error{background:rgba(40,10,10,.9);border:1px solid var(--error);color:var(--error);}
+  #toast.info{background:rgba(6,20,50,.9);border:1px solid var(--accent);color:var(--accent);}
+
+  .divider{text-align:center;color:var(--muted);font-size:.7rem;letter-spacing:.1em;margin:8px 0 4px;position:relative;}
+  .divider::before,.divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:var(--border);}
+  .divider::before{left:0;}.divider::after{right:0;}
+
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .pw-wrap{position:relative;}
+  .pw-toggle{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    background:none;border:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:2px;
+  }
+  .switch-link{
+    width:100%;margin-top:8px;padding:9px;border-radius:9px;
+    border:1px solid var(--border);background:rgba(255,255,255,.03);
+    color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:.85rem;
+    cursor:pointer;display:block;text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+<canvas id="stars-canvas"></canvas>
+
+<div id="toast"><span class="toast-icon"></span><span id="toast-msg"></span></div>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🪐</div>
+    <h1>NeuralOrbit</h1>
+    <p>ML Platform Access</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+    <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="tab-panel active" id="panel-login">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="your_username" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+        <button class="pw-toggle" onclick="togglePw('login-password',this)">👁</button>
+      </div>
+    </div>
+    <button class="btn" id="btn-login" onclick="doLogin()">
+      <div class="btn-inner"><div class="spinner"></div><span class="btn-text">Launch Session</span></div>
+    </button>
+    <div class="divider" style="margin-top:18px;">No account?</div>
+    <button class="switch-link" onclick="switchTab('signup')">Create one →</button>
+  </div>
+
+  <!-- SIGNUP -->
+  <div class="tab-panel" id="panel-signup">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="reg-username" placeholder="cool_username" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="reg-email" placeholder="you@galaxy.io" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="reg-password" placeholder="min 4 characters" autocomplete="new-password"/>
+        <button class="pw-toggle" onclick="togglePw('reg-password',this)">👁</button>
+      </div>
+    </div>
+    <button class="btn" id="btn-register" onclick="doRegister()">
+      <div class="btn-inner"><div class="spinner"></div><span class="btn-text">Join the Orbit</span></div>
+    </button>
+    <div class="divider" style="margin-top:18px;">Already have an account?</div>
+    <button class="switch-link" onclick="switchTab('login')">Sign in →</button>
+  </div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+
+// ── Stars ────────────────────────────────────────
+(function(){
+  const c=document.getElementById('stars-canvas');
+  const ctx=c.getContext('2d');let stars=[];
+  function resize(){c.width=innerWidth;c.height=innerHeight;initStars();}
+  function initStars(){
+    stars=[];const n=Math.floor((c.width*c.height)/3500);
+    for(let i=0;i<n;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.8+.2,a:Math.random(),da:(Math.random()-.5)*.004,vx:(Math.random()-.5)*.12,vy:(Math.random()-.5)*.12});
+  }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s=>{s.a+=s.da;if(s.a<0||s.a>1)s.da*=-1;s.x+=s.vx;s.y+=s.vy;if(s.x<0)s.x=c.width;if(s.x>c.width)s.x=0;if(s.y<0)s.y=c.height;if(s.y>c.height)s.y=0;ctx.save();ctx.globalAlpha=s.a;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();ctx.restore();});
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);resize();draw();
+})();
+
+// ── Tabs ─────────────────────────────────────────
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['login','signup'][i]===t));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+t));
+}
+
+// ── PW toggle ────────────────────────────────────
+function togglePw(id,btn){
+  const i=document.getElementById(id);
+  if(i.type==='password'){i.type='text';btn.textContent='🙈';}
+  else{i.type='password';btn.textContent='👁';}
+}
+
+// ── Toast ────────────────────────────────────────
+let toastTimer;
+function toast(msg,type='info'){
+  const el=document.getElementById('toast');
+  const icons={success:'✅',error:'❌',info:'🛸'};
+  document.getElementById('toast-msg').textContent=msg;
+  el.querySelector('.toast-icon').textContent=icons[type]||'';
+  el.className='show '+type;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.className=el.className.replace('show','').trim();},3500);
+}
+
+function setLoading(btnId,on){
+  const b=document.getElementById(btnId);b.disabled=on;b.classList.toggle('loading',on);
+}
+
+// ── Login ────────────────────────────────────────
+async function doLogin(){
+  const user=document.getElementById('login-username').value.trim();
+  const pass=document.getElementById('login-password').value;
+  if(!user||!pass){toast('Please fill in all fields','error');return;}
+  setLoading('btn-login',true);
+  try{
+    const res=await fetch(`${API}/users/login`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_name:user,password:pass})
+    });
+    const data=await res.json();
+    if(!res.ok){toast(data.detail||'Login failed','error');}
+    else{
+      // FIX: store token, user_name, AND coins from login response
+      localStorage.setItem('token',data.access_token);
+      localStorage.setItem('user_name',user);
+      toast('Access granted — launching dashboard...','success');
+      setTimeout(()=>{window.location.href='dashboard.html';},1200);
+    }
+  }catch(e){toast('Cannot reach server. Is it running?','error');}
+  finally{setLoading('btn-login',false);}
+}
+
+// ── Register ──────────────────────────────────────
+async function doRegister(){
+  const user=document.getElementById('reg-username').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-password').value;
+  if(!user||!email||!pass){toast('Please fill in all fields','error');return;}
+  if(user.length<3){toast('Username must be at least 3 characters','error');return;}
+  if(pass.length<4){toast('Password must be at least 4 characters','error');return;}
+  setLoading('btn-register',true);
+  try{
+    const res=await fetch(`${API}/users`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_name:user,email,password:pass})
+    });
+    const data=await res.json();
+    if(!res.ok){toast(data.detail||'Registration failed','error');}
+    else{
+      toast('Account created! Signing you in...','success');
+      // FIX: auto-login after registration so user doesn't have to re-enter credentials
+      document.getElementById('reg-username').value='';
+      document.getElementById('reg-email').value='';
+      document.getElementById('reg-password').value='';
+      // Auto switch to login and pre-fill
+      setTimeout(()=>{
+        switchTab('login');
+        document.getElementById('login-username').value=user;
+      },800);
+    }
+  }catch(e){toast('Cannot reach server. Is it running?','error');}
+  finally{setLoading('btn-register',false);}
+}
+
+// ── Enter key ─────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('panel-login').classList.contains('active'))doLogin();
+    else doRegister();
+  }
+});
+
+// ── Redirect if already logged in ────────────────
+if(localStorage.getItem('token')){window.location.href='dashboard.html';}
+</script>
+</body>
+</html>

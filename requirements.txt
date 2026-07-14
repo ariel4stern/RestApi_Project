@@ -1,0 +1,15 @@
+fastapi==0.111.0
+uvicorn==0.30.1
+pydantic==2.7.4
+email-validator==2.1.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+PyJWT==2.8.0
+numpy==2.4.3
+pandas==2.2.2
+scikit-learn==1.5.0
+tensorflow
+joblib
+python-dotenv
+
+#py -m pip install -r requirements.txt

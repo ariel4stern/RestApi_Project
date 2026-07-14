@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NeuralOrbit — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#020510;--panel:rgba(6,14,40,0.82);--panel2:rgba(4,10,30,0.9);
+    --border:rgba(80,160,255,0.15);--accent:#3b82f6;--accent2:#06b6d4;
+    --accent3:#7c3aed;--glow:rgba(59,130,246,0.3);--text:#e2eeff;
+    --muted:#8aaad4;--success:#22d3a0;--error:#f87171;--warn:#fbbf24;--coin:#f59e0b;
+    --box-success-bg:rgba(20,80,60,0.55);--box-success-border:rgba(34,211,160,0.45);
+    --box-error-bg:rgba(80,20,20,0.55);--box-error-border:rgba(248,113,113,0.45);
+    --box-info-bg:rgba(18,45,100,0.55);--box-info-border:rgba(99,179,255,0.45);
+    --box-model-bg:rgba(12,35,80,0.60);--box-model-border:rgba(99,179,255,0.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  #stars-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
+  .nebula{position:fixed;border-radius:50%;filter:blur(100px);opacity:.12;pointer-events:none;z-index:0;}
+  .nebula-1{width:600px;height:600px;background:radial-gradient(circle,#1e40af,transparent);top:-200px;left:-200px;}
+  .nebula-2{width:500px;height:500px;background:radial-gradient(circle,#0e7490,transparent);bottom:-150px;right:-150px;}
+  .nebula-3{width:350px;height:350px;background:radial-gradient(circle,#7c3aed,transparent);top:40%;left:55%;}
+
+  header{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 32px;background:rgba(2,5,16,.75);
+    border-bottom:1px solid var(--border);backdrop-filter:blur(20px);
+  }
+  .header-logo{
+    display:flex;align-items:center;gap:10px;
+    font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.08em;
+    background:linear-gradient(90deg,#93c5fd,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .logo-orb{
+    width:34px;height:34px;border-radius:50%;
+    background:conic-gradient(from 0deg,#3b82f6,#06b6d4,#7c3aed,#3b82f6);
+    display:flex;align-items:center;justify-content:center;font-size:16px;
+    animation:spinOrbit 8s linear infinite;box-shadow:0 0 14px var(--glow);
+  }
+  @keyframes spinOrbit{to{filter:hue-rotate(360deg);}}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .user-badge{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:.85rem;color:var(--muted);}
+  .user-badge strong{color:var(--text);font-weight:700;}
+  .coins-badge{display:flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:6px 12px;font-size:.85rem;color:var(--coin);font-weight:700;}
+
+  /* ── Edit Profile button (top-left area of header) */
+  .edit-profile-btn{
+    display:flex;align-items:center;gap:6px;
+    background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.35);
+    color:#c4b5fd;border-radius:8px;padding:7px 14px;
+    font-family:'Orbitron',sans-serif;font-size:.6rem;letter-spacing:.1em;cursor:pointer;transition:all .2s;
+  }
+  .edit-profile-btn:hover{background:rgba(124,58,237,.25);}
+
+  .signout-btn{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);color:var(--error);border-radius:8px;padding:7px 14px;font-family:'Orbitron',sans-serif;font-size:.6rem;letter-spacing:.1em;cursor:pointer;transition:all .2s;}
+  .signout-btn:hover{background:rgba(248,113,113,.18);}
+
+  main{position:relative;z-index:10;max-width:1100px;margin:0 auto;padding:36px 24px 60px;}
+  .page-title{font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:900;letter-spacing:.06em;margin-bottom:6px;background:linear-gradient(90deg,var(--text),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .page-sub{color:var(--muted);font-size:.9rem;letter-spacing:.06em;margin-bottom:32px;font-weight:600;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:720px){.grid{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:16px;
+    padding:28px 26px;backdrop-filter:blur(16px);
+    box-shadow:0 0 40px rgba(59,130,246,.08);animation:cardIn .5s ease both;
+  }
+  .card:nth-child(1){animation-delay:.05s;}
+  .card:nth-child(2){animation-delay:.1s;}
+  .card:nth-child(3){animation-delay:.13s;}
+  .card:nth-child(4){animation-delay:.16s;grid-column:span 2;}
+  .card:nth-child(5){animation-delay:.19s;grid-column:span 2;}
+  @media(max-width:720px){.card:nth-child(4),.card:nth-child(5){grid-column:span 1;}}
+  @keyframes cardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+  .card-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+  .card-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .card-icon.blue{background:rgba(59,130,246,.15);box-shadow:0 0 12px rgba(59,130,246,.2);}
+  .card-icon.cyan{background:rgba(6,182,212,.15);box-shadow:0 0 12px rgba(6,182,212,.2);}
+  .card-icon.gold{background:rgba(245,158,11,.12);box-shadow:0 0 12px rgba(245,158,11,.15);}
+  .card-icon.green{background:rgba(34,211,160,.12);box-shadow:0 0 12px rgba(34,211,160,.15);}
+  .card-icon.red{background:rgba(248,113,113,.12);box-shadow:0 0 12px rgba(248,113,113,.15);}
+  .card-title{font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:600;letter-spacing:.08em;color:var(--text);}
+  .card-sub{font-size:.75rem;color:var(--muted);margin-top:2px;font-weight:600;}
+
+  .form-group{margin-bottom:14px;}
+  label{display:block;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:700;}
+  input{width:100%;padding:10px 13px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:600;outline:none;transition:border-color .2s,box-shadow .2s;}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.12);}
+  input::placeholder{color:rgba(112,144,184,.35);}
+  textarea{width:100%;padding:10px 13px;min-height:70px;resize:vertical;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.88rem;font-weight:600;outline:none;transition:border-color .2s;line-height:1.5;}
+  textarea:focus{border-color:var(--accent);}
+  textarea::placeholder{color:rgba(112,144,184,.35);}
+  .input-hint{font-size:.68rem;color:var(--muted);margin-top:4px;letter-spacing:.04em;font-weight:600;}
+
+  .btn{width:100%;padding:11px;border:none;border-radius:9px;font-family:'Orbitron',sans-serif;font-size:.68rem;letter-spacing:.1em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;overflow:hidden;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 0 16px var(--glow);}
+  .btn-primary:hover{opacity:.9;transform:translateY(-1px);}
+  .btn-cyan{background:linear-gradient(135deg,var(--accent2),#0891b2);color:#fff;box-shadow:0 0 16px rgba(6,182,212,.25);}
+  .btn-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;box-shadow:0 0 16px rgba(245,158,11,.25);}
+  .btn-danger{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;box-shadow:0 0 16px rgba(239,68,68,.25);}
+  .btn-danger:hover{opacity:.9;transform:translateY(-1px);}
+  .btn-violet{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;box-shadow:0 0 16px rgba(124,58,237,.25);}
+  .btn-violet:hover{opacity:.9;transform:translateY(-1px);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+  .spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .btn.loading .spinner{display:block;}
+  .btn.loading .btn-text{opacity:.6;}
+
+  .result-box{margin-top:14px;border-radius:10px;padding:14px 16px;font-size:.9rem;display:none;border:1px solid;line-height:1.65;font-weight:600;}
+  .result-box.show{display:block;}
+  .result-box.success{background:var(--box-success-bg);border-color:var(--box-success-border);color:#6eedd4;}
+  .result-box.error{background:var(--box-error-bg);border-color:var(--box-error-border);color:#ffadad;}
+  .result-box.info{background:var(--box-info-bg);border-color:var(--box-info-border);color:#b3d4ff;}
+  .result-box .result-title{font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:.12em;margin-bottom:6px;opacity:.75;font-weight:700;}
+  .result-val{font-size:1.4rem;font-weight:700;font-family:'Orbitron',sans-serif;}
+
+  .predict-big{text-align:center;padding:6px 0 2px;}
+  .predict-big .label{font-size:.68rem;color:#8fc4ff;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
+  .predict-big .value{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;color:#7dd8f8;text-shadow:0 0 20px rgba(6,182,212,.4);}
+  .predict-big .coins-used{font-size:.72rem;color:#8fc4ff;margin-top:4px;font-weight:700;}
+
+  .model-info-panel{border-radius:12px;padding:18px 20px;background:var(--box-model-bg);border:1px solid var(--box-model-border);color:#b3d4ff;font-weight:600;line-height:1.7;}
+  .model-info-panel .mi-title{font-family:'Orbitron',sans-serif;font-size:.7rem;letter-spacing:.13em;color:#7ab8ff;font-weight:700;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+  .model-info-panel .mi-title::after{content:'';flex:1;height:1px;background:var(--box-model-border);}
+  .model-info-empty{text-align:center;padding:18px 10px;font-family:'Orbitron',sans-serif;font-size:.72rem;letter-spacing:.08em;color:#5a85b8;font-weight:600;}
+  .model-info-empty .no-model-icon{font-size:2rem;display:block;margin-bottom:8px;opacity:.5;}
+  .mi-row{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .mi-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:#6a9fd8;font-weight:700;min-width:90px;}
+  .mi-value{font-size:.95rem;color:#d0e8ff;font-weight:700;}
+  .mi-value.highlight{font-family:'Orbitron',sans-serif;color:#7dd8f8;font-size:1rem;}
+
+  /* ── Shared modal base ── */
+  .modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(1,3,12,.75);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:rgba(8,18,50,.95);border-radius:18px;padding:38px 36px 32px;max-width:460px;width:90%;animation:modalIn .3s cubic-bezier(.22,.68,0,1.2);}
+  @keyframes modalIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+  .modal-icon{font-size:2.8rem;text-align:center;margin-bottom:14px;}
+  .modal-title{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;letter-spacing:.06em;text-align:center;margin-bottom:10px;}
+  .modal-body{font-size:.92rem;font-weight:600;text-align:center;line-height:1.7;margin-bottom:8px;}
+  .modal-hint{font-size:.78rem;font-weight:600;text-align:center;margin-bottom:22px;letter-spacing:.04em;}
+  .modal-actions{display:flex;gap:12px;}
+  .modal-actions .btn{flex:1;}
+  .btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);font-family:'Orbitron',sans-serif;font-size:.62rem;letter-spacing:.1em;cursor:pointer;border-radius:9px;padding:11px;transition:all .2s;}
+  .btn-ghost:hover{background:rgba(255,255,255,.1);}
+
+  /* Delete modal specifics */
+  #delete-modal .modal-box{border:1px solid rgba(239,68,68,.35);box-shadow:0 0 60px rgba(239,68,68,.15);}
+  #delete-modal .modal-title{color:#ffadad;}
+  #delete-modal .modal-body{color:#b3d4ff;}
+  #delete-modal .modal-hint{color:#6a9fd8;}
+
+  /* Patch modal specifics */
+  #patch-modal .modal-box{border:1px solid rgba(124,58,237,.4);box-shadow:0 0 60px rgba(124,58,237,.15);max-width:500px;}
+  #patch-modal .modal-title{color:#c4b5fd;}
+  #patch-modal .modal-body{color:#b3d4ff;}
+  #patch-modal .modal-hint{color:#6a9fd8;}
+
+  /* Optional-field badge */
+  .optional-badge{
+    display:inline-block;margin-left:6px;padding:1px 7px;
+    background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.35);
+    border-radius:20px;font-size:.6rem;letter-spacing:.08em;color:#c4b5fd;
+    vertical-align:middle;font-weight:700;
+  }
+  .patch-info-box{
+    background:rgba(18,45,100,.45);border:1px solid rgba(99,179,255,.3);
+    border-radius:10px;padding:12px 16px;margin-bottom:18px;
+    font-size:.82rem;color:#93c5fd;font-weight:600;line-height:1.6;
+  }
+  .patch-info-box .pi-title{font-family:'Orbitron',sans-serif;font-size:.62rem;letter-spacing:.12em;color:#7ab8ff;font-weight:700;margin-bottom:6px;}
+
+  #toast{position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-80px);z-index:9999;padding:11px 22px;border-radius:10px;font-family:'Rajdhani',sans-serif;font-size:.92rem;letter-spacing:.04em;font-weight:700;min-width:260px;text-align:center;transition:transform .4s cubic-bezier(.22,.68,0,1.2),opacity .3s;opacity:0;display:flex;align-items:center;gap:10px;justify-content:center;}
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+  #toast.success{background:var(--box-success-bg);border:1px solid var(--box-success-border);color:#6eedd4;}
+  #toast.error{background:var(--box-error-bg);border:1px solid var(--box-error-border);color:#ffadad;}
+  #toast.info{background:var(--box-info-bg);border:1px solid var(--box-info-border);color:#b3d4ff;}
+
+  .section-label{font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:700;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  strong{font-weight:800;}
+</style>
+</head>
+<body>
+
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+<canvas id="stars-canvas"></canvas>
+<div id="toast"><span class="toast-icon"></span><span id="toast-msg"></span></div>
+
+<!-- ══ DELETE MODAL ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal-box">
+    <div class="modal-icon">⚠️</div>
+    <div class="modal-title">Delete Your Model?</div>
+    <div class="modal-body">You're about to permanently delete your trained model. This action cannot be undone.</div>
+    <div class="modal-hint">💡 You can always train a brand new model after deleting this one.</div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeDeleteModal()">✕ Cancel</button>
+      <button class="btn btn-danger" id="btn-confirm-delete" onclick="confirmDelete()">
+        <div class="spinner"></div><span class="btn-text">🗑 Yes, Delete It</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PATCH / EDIT PROFILE MODAL ════════════════════════════════════ -->
+<div class="modal-overlay" id="patch-modal">
+  <div class="modal-box">
+    <div class="modal-icon">✏️</div>
+    <div class="modal-title">Edit Your Profile</div>
+    <div class="modal-body" style="margin-bottom:16px;">Update only the fields you want to change — everything else stays the same.</div>
+
+    <!-- Info box explaining optional fields -->
+    <div class="patch-info-box">
+      <div class="pi-title">ℹ️ How this works</div>
+      All three fields are <strong>optional</strong>. Leave any field blank and it will <strong>not</strong> be changed.
+      If you rename your username, your trained model will be automatically renamed to match.
+    </div>
+
+    <div class="form-group">
+      <label>New Username <span class="optional-badge">optional</span></label>
+      <input type="text" id="patch-username" placeholder="Leave blank to keep current username" autocomplete="off"/>
+      <div class="input-hint">Min 3 characters · Must be unique</div>
+    </div>
+    <div class="form-group">
+      <label>New Email <span class="optional-badge">optional</span></label>
+      <input type="email" id="patch-email" placeholder="Leave blank to keep current email" autocomplete="off"/>
+      <div class="input-hint">Must be a valid email address</div>
+    </div>
+    <div class="form-group" style="margin-bottom:22px;">
+      <label>New Password <span class="optional-badge">optional</span></label>
+      <input type="password" id="patch-password" placeholder="Leave blank to keep current password" autocomplete="new-password"/>
+      <div class="input-hint">Min 4 characters</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closePatchModal()">✕ Cancel</button>
+      <button class="btn btn-violet" id="btn-confirm-patch" onclick="confirmPatch()">
+        <div class="spinner"></div><span class="btn-text">💾 Save Changes</span>
+      </button>
+    </div>
+    <div class="result-box" id="res-patch" style="margin-top:16px;">
+      <div class="result-title">Update Result</div>
+      <div id="res-patch-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════ -->
+<header>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="header-logo">
+      <div class="logo-orb">🪐</div>
+      NeuralOrbit
+    </div>
+    <!-- Edit Profile button — top left area -->
+    <button class="edit-profile-btn" onclick="openPatchModal()">✏️ Edit Profile</button>
+  </div>
+  <div class="header-right">
+    <div class="user-badge">👤 <strong id="hdr-user">—</strong></div>
+    <div class="coins-badge">🪙 <span id="hdr-coins">—</span></div>
+    <button class="signout-btn" onclick="signOut()">⏻ Sign Out</button>
+  </div>
+</header>
+
+<!-- ══ MAIN ════════════════════════════════════════════════════════ -->
+<main>
+  <div class="page-title">Mission Control</div>
+  <div class="page-sub">Train models · Run predictions · Manage credits</div>
+
+  <div class="grid">
+
+    <!-- TRAIN -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon blue">🧠</div>
+        <div><div class="card-title">Train Model</div><div class="card-sub">Fit a polynomial regression on your data</div></div>
+      </div>
+      <div class="section-label">Training data</div>
+      <div class="form-group">
+        <label>Training Hours (comma-separated)</label>
+        <textarea id="train-hours" placeholder="100, 120, 145, 170, 195, 215, 240"></textarea>
+        <div class="input-hint">e.g. 100, 120, 145, 170</div>
+      </div>
+      <div class="form-group">
+        <label>Running Time (comma-separated)</label>
+        <textarea id="train-time" placeholder="40, 50, 60, 70, 80, 90, 100"></textarea>
+        <div class="input-hint">Must match length of Training Hours</div>
+      </div>
+      <div class="form-group">
+        <label>Polynomial Degree</label>
+        <input type="number" id="train-degree" placeholder="2" min="1" max="10" value="2"/>
+        <div class="input-hint">Degree ≥ 1</div>
+      </div>
+      <button class="btn btn-primary" id="btn-train" onclick="doTrain()">
+        <div class="spinner"></div><span class="btn-text">🚀 Launch Training</span>
+      </button>
+      <div class="result-box" id="res-train">
+        <div class="result-title">Training Result</div>
+        <div id="res-train-msg"></div>
+      </div>
+    </div>
+
+    <!-- PREDICT -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon cyan">🔭</div>
+        <div><div class="card-title">Run Prediction</div><div class="card-sub">Use your trained model to forecast</div></div>
+      </div>
+      <div class="section-label">Input</div>
+      <div class="form-group">
+        <label>Hours Value</label>
+        <input type="number" id="predict-hours" placeholder="e.g. 300" step="any"/>
+        <div class="input-hint">The value to predict running time for</div>
+      </div>
+      <button class="btn btn-cyan" id="btn-predict" onclick="doPredict()" style="margin-top:8px;">
+        <div class="spinner"></div><span class="btn-text">🔮 Run Prediction</span>
+      </button>
+      <div class="result-box" id="res-predict">
+        <div class="predict-big">
+          <div class="label">Predicted Running Time</div>
+          <div class="value" id="predict-value">—</div>
+          <div class="coins-used" id="predict-coins"></div>
+        </div>
+      </div>
+      <div class="result-box" id="res-predict-error">
+        <div class="result-title">Error</div>
+        <div id="res-predict-error-msg"></div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="section-label">Model accuracy</div>
+        <button class="btn" style="background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);font-size:.62rem;font-weight:700;" onclick="getAccuracy()">
+          <span>📊 Check Model Score</span>
+        </button>
+        <div class="result-box" id="res-acc">
+          <div class="result-title">R² Score</div>
+          <div class="result-val" id="acc-value"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <div class="section-label">Active model</div>
+        <div id="model-info-wrap">
+          <div class="model-info-panel">
+            <div class="mi-title">Active Model</div>
+            <div class="model-info-empty">
+              <span class="no-model-icon">⏳</span>
+              Loading model data...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELETE MODEL (full width) -->
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="card-icon red">🗑️</div>
+          <div><div class="card-title">Delete Model</div><div class="card-sub">Remove your current model before retraining</div></div>
+        </div>
+        <button class="btn btn-danger" id="btn-delete-open" onclick="openDeleteModal()" style="width:auto;padding:10px 22px;font-size:.63rem;">
+          🗑 Delete My Model
+        </button>
+      </div>
+    </div>
+
+    <!-- BUY COINS (full width) -->
+    <div class="card">
+      <div class="card-header" style="margin-bottom:18px;">
+        <div class="card-icon gold">🪙</div>
+        <div><div class="card-title">Buy Coins</div><div class="card-sub">Recharge 10 prediction credits — enter your card details</div></div>
+      </div>
+      <div class="section-label">Card information</div>
+      <div class="form-group">
+        <label>Card Number (16 digits)</label>
+        <input type="text" id="cc-front" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCardNumber(this)"/>
+        <div class="input-hint">Exactly 16 digits required</div>
+      </div>
+      <div class="three-col">
+        <div class="form-group" style="margin-bottom:0;grid-column:span 2;">
+          <label>Expiry (MM/YY)</label>
+          <input type="text" id="cc-expire" placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)"/>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>CVV</label>
+          <input type="password" id="cc-back" placeholder="•••" maxlength="3"/>
+        </div>
+      </div>
+      <button class="btn btn-gold" id="btn-coins" onclick="doBuyCoins()" style="margin-top:16px;">
+        <div class="spinner"></div><span class="btn-text">💳 Purchase 10 Coins</span>
+      </button>
+      <div class="result-box" id="res-coins">
+        <div class="result-title">Purchase Result</div>
+        <div id="res-coins-msg"></div>
+      </div>
+    </div>
+
+  </div><!-- /grid -->
+</main>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+
+// ── Auth guard ───────────────────────────────────
+const token = localStorage.getItem('token');
+let userName = localStorage.getItem('user_name');
+if(!token || !userName){ window.location.href = 'index.html'; }
+
+document.getElementById('hdr-user').textContent = userName || '—';
+
+function authHeaders(){ return {'Content-Type':'application/json','Authorization':'Bearer '+token}; }
+
+// ── Load user coins ──────────────────────────────
+async function loadUserInfo(){
+  try{
+    const res = await fetch(`${API}/users/name/${encodeURIComponent(userName)}`, { headers: authHeaders() });
+    if(res.status === 401){ signOut(); return; }
+    if(!res.ok) return;
+    const d = await res.json();
+    // ← FIX: router returns { "User: ": {...} } — password is stripped server-side
+    const user = d['User: '] || d.user || d;
+    document.getElementById('hdr-coins').textContent = user.coins ?? '—';
+  }catch(e){ console.error('loadUserInfo error:', e); }
+}
+loadUserInfo();
+
+// ── Load model info ──────────────────────────────
+async function loadModelInfo(){
+  const wrap = document.getElementById('model-info-wrap');
+  try{
+    const res = await fetch(`${API}/models/name`, { headers: authHeaders() });
+    if(res.status === 401){ signOut(); return; }
+    if(res.status === 404){
+      wrap.innerHTML = `
+        <div class="model-info-panel">
+          <div class="mi-title">Active Model</div>
+          <div class="model-info-empty">
+            <span class="no-model-icon">🛸</span>
+            <strong>No Model Yet</strong><br/>
+            Head over to the <strong>Train Model</strong> panel above<br/>
+            to launch your first polynomial regression model.
+          </div>
+        </div>`;
+      return;
+    }
+    if(!res.ok){ wrap.innerHTML = renderModelError('Could not load model data.'); return; }
+    const d = await res.json();
+    const m = d.model || d;
+
+    let accStr = '—';
+    try{
+      const accRes = await fetch(`${API}/models/acc`, { headers: authHeaders() });
+      if(accRes.ok){
+        const accData = await accRes.json();
+        const raw = Object.values(accData)[0];
+        const match = String(raw).match(/[\d.]+/);
+        if(match) accStr = parseFloat(match[0]).toFixed(6);
+      }
+    }catch(_){}
+
+    wrap.innerHTML = `
+      <div class="model-info-panel">
+        <div class="mi-title">Active Model</div>
+        <div class="mi-row"><span class="mi-label">Model ID</span><span class="mi-value highlight">#${m.id ?? '—'}</span></div>
+        <div class="mi-row"><span class="mi-label">Name</span><span class="mi-value highlight">${m.model_name ?? '—'}</span></div>
+        <div class="mi-row"><span class="mi-label">Created</span><span class="mi-value">${m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</span></div>
+        <div class="mi-row" style="margin-top:6px;"><span class="mi-label">R² Score</span><span class="mi-value highlight">${accStr}</span></div>
+      </div>`;
+  }catch(e){
+    wrap.innerHTML = renderModelError('Connection error — cannot reach server.');
+  }
+}
+function renderModelError(msg){
+  return `<div class="model-info-panel"><div class="mi-title">Active Model</div>
+    <div class="model-info-empty"><span class="no-model-icon">⚠️</span><strong>${msg}</strong></div></div>`;
+}
+loadModelInfo();
+
+// ── Stars ────────────────────────────────────────
+(function(){
+  const c=document.getElementById('stars-canvas');
+  const ctx=c.getContext('2d');let stars=[];
+  function resize(){c.width=innerWidth;c.height=innerHeight;initStars();}
+  function initStars(){
+    stars=[];const n=Math.floor((c.width*c.height)/3500);
+    for(let i=0;i<n;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.8+.2,a:Math.random(),da:(Math.random()-.5)*.004,vx:(Math.random()-.5)*.1,vy:(Math.random()-.5)*.1});
+  }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s=>{s.a+=s.da;if(s.a<0||s.a>1)s.da*=-1;s.x+=s.vx;s.y+=s.vy;if(s.x<0)s.x=c.width;if(s.x>c.width)s.x=0;if(s.y<0)s.y=c.height;if(s.y>c.height)s.y=0;ctx.save();ctx.globalAlpha=s.a;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();ctx.restore();});
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);resize();draw();
+})();
+
+// ── Toast ─────────────────────────────────────────
+let toastT;
+function toast(msg,type='info'){
+  const el=document.getElementById('toast');
+  const icons={success:'✅',error:'❌',info:'🛸'};
+  document.getElementById('toast-msg').textContent=msg;
+  el.querySelector('.toast-icon').textContent=icons[type]||'';
+  el.className='show '+type;
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>{el.className=el.className.replace('show','').trim();},3500);
+}
+function setLoading(id,on){const b=document.getElementById(id);b.disabled=on;b.classList.toggle('loading',on);}
+function signOut(){localStorage.removeItem('token');localStorage.removeItem('user_name');window.location.href='index.html';}
+function parseFloatList(str){return str.split(/[\s,]+/).filter(Boolean).map(Number);}
+
+// ── DELETE MODAL ──────────────────────────────────
+function openDeleteModal(){ document.getElementById('delete-modal').classList.add('show'); }
+function closeDeleteModal(){ document.getElementById('delete-modal').classList.remove('show'); }
+async function confirmDelete(){
+  setLoading('btn-confirm-delete', true);
+  try{
+    const res = await fetch(`${API}/models/del`, { method:'DELETE', headers: authHeaders() });
+    const d = await res.json();
+    closeDeleteModal();
+    if(!res.ok){ toast(d.detail || 'Delete failed', 'error'); }
+    else{ toast('Model deleted — you can train a new one anytime!', 'success'); loadModelInfo(); }
+  }catch(e){ closeDeleteModal(); toast('Cannot reach server','error'); }
+  finally{ setLoading('btn-confirm-delete', false); }
+}
+document.getElementById('delete-modal').addEventListener('click', function(e){ if(e.target===this) closeDeleteModal(); });
+
+// ── PATCH / EDIT PROFILE MODAL ────────────────────
+function openPatchModal(){
+  // Clear previous results
+  document.getElementById('res-patch').className = 'result-box';
+  document.getElementById('patch-username').value = '';
+  document.getElementById('patch-email').value = '';
+  document.getElementById('patch-password').value = '';
+  document.getElementById('patch-modal').classList.add('show');
+}
+function closePatchModal(){ document.getElementById('patch-modal').classList.remove('show'); }
+
+async function confirmPatch(){
+  const newUsername = document.getElementById('patch-username').value.trim() || null;
+  const newEmail    = document.getElementById('patch-email').value.trim() || null;
+  const newPassword = document.getElementById('patch-password').value || null;
+
+  // Client-side validation (only validate filled fields)
+  if(newUsername !== null && newUsername.length < 3){
+    toast('Username must be at least 3 characters','error'); return;
+  }
+  if(newEmail !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)){
+    toast('Please enter a valid email address','error'); return;
+  }
+  if(newPassword !== null && newPassword.length < 4){
+    toast('Password must be at least 4 characters','error'); return;
+  }
+  if(newUsername === null && newEmail === null && newPassword === null){
+    toast('Fill in at least one field to update','error'); return;
+  }
+
+  // We need the current user's id — fetch it
+  setLoading('btn-confirm-patch', true);
+  document.getElementById('res-patch').className = 'result-box';
+
+  try{
+    // Get current user id
+    const meRes = await fetch(`${API}/users/name/${encodeURIComponent(userName)}`, { headers: authHeaders() });
+    if(!meRes.ok){ toast('Could not load user data','error'); return; }
+    const meData = await meRes.json();
+    const me = meData['User: '] || meData.user || meData;
+    const userId = me.id;
+
+    const body = {};
+    if(newUsername !== null) body.user_name = newUsername;
+    if(newEmail    !== null) body.email     = newEmail;
+    if(newPassword !== null) body.password  = newPassword;
+
+    const res = await fetch(`${API}/users/patch/${userId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    const d = await res.json();
+
+    if(!res.ok){
+      document.getElementById('res-patch-msg').textContent = d.detail || 'Update failed';
+      document.getElementById('res-patch').className = 'result-box show error';
+      toast(d.detail || 'Update failed','error');
+    } else {
+      const updated = d['Patched user: '] || d.user || {};
+      const displayName = updated.user_name || newUsername || userName;
+
+      document.getElementById('res-patch-msg').innerHTML =
+        `<strong>✅ Profile updated successfully!</strong><br/>` +
+        (updated.user_name ? `Username → <strong>${updated.user_name}</strong><br/>` : '') +
+        (updated.email     ? `Email → <strong>${updated.email}</strong>` : '');
+      document.getElementById('res-patch').className = 'result-box show success';
+
+      // Update local state if username changed
+      if(newUsername && newUsername !== userName){
+        userName = newUsername;
+        localStorage.setItem('user_name', newUsername);
+        document.getElementById('hdr-user').textContent = newUsername;
+        toast(`Username changed — please sign in again with your new username.`, 'success');
+        // Force re-login so the token (which contains old username) is refreshed
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user_name');
+          window.location.href = 'index.html';
+        }, 2000);
+      } else {
+        toast('Profile updated successfully!', 'success');
+      }
+
+      // Refresh coins display
+      loadUserInfo();
+
+      // Auto-close after a short delay
+      setTimeout(() => closePatchModal(), 2200);
+    }
+  }catch(e){ toast('Cannot reach server','error'); }
+  finally{ setLoading('btn-confirm-patch', false); }
+}
+document.getElementById('patch-modal').addEventListener('click', function(e){ if(e.target===this) closePatchModal(); });
+
+// ── TRAIN ─────────────────────────────────────────
+async function doTrain(){
+  const hours=parseFloatList(document.getElementById('train-hours').value);
+  const times=parseFloatList(document.getElementById('train-time').value);
+  const degree=parseInt(document.getElementById('train-degree').value);
+
+  if(!hours.length||!times.length){toast('Please enter training data','error');return;}
+  if(hours.length!==times.length){toast(`Length mismatch: ${hours.length} hours vs ${times.length} times`,'error');return;}
+  if(isNaN(degree)||degree<1){toast('Degree must be ≥ 1','error');return;}
+  if(hours.some(isNaN)||times.some(isNaN)){toast('All values must be valid numbers','error');return;}
+  if(hours.some(v=>v<0)||times.some(v=>v<0)){toast('Values cannot be negative','error');return;}
+
+  setLoading('btn-train',true);
+  document.getElementById('res-train').className='result-box';
+  try{
+    const res=await fetch(`${API}/models/train`,{method:'POST',headers:authHeaders(),body:JSON.stringify({training_hours:hours,running_time:times,degree})});
+    const d=await res.json();
+    if(!res.ok){
+      toast(d.detail||'Training failed','error');
+      document.getElementById('res-train-msg').textContent=d.detail||'Error';
+      document.getElementById('res-train').className='result-box show error';
+    }else{
+      toast('Model trained successfully!','success');
+      document.getElementById('res-train-msg').innerHTML=`<strong>✅ ${d.message}</strong><br/>Model ID: <strong>${d.model?.id}</strong><br/>Name: <strong>${d.model?.model_name}</strong><br/>Created: <strong>${d.model?.created_at}</strong>`;
+      document.getElementById('res-train').className='result-box show success';
+      loadModelInfo();
+    }
+  }catch(e){toast('Cannot reach server','error');}
+  finally{setLoading('btn-train',false);}
+}
+
+// ── PREDICT ───────────────────────────────────────
+async function doPredict(){
+  const val=document.getElementById('predict-hours').value.trim();
+  if(val===''||isNaN(Number(val))){toast('Enter a valid hours value','error');return;}
+  setLoading('btn-predict',true);
+  document.getElementById('res-predict').className='result-box';
+  document.getElementById('res-predict-error').className='result-box';
+  try{
+    const res=await fetch(`${API}/models/predict/${encodeURIComponent(val)}`,{headers:authHeaders()});
+    const d=await res.json();
+    if(!res.ok){
+      document.getElementById('res-predict-error-msg').textContent=d.detail||'Prediction failed';
+      document.getElementById('res-predict-error').className='result-box show error';
+      toast(d.detail||'Prediction failed','error');
+    }else if(d.message&&d.message.includes('Not enough')){
+      document.getElementById('res-predict-error-msg').textContent=d.message+' — use the Buy Coins panel below.';
+      document.getElementById('res-predict-error').className='result-box show error';
+      toast('No coins left — please recharge','error');
+      document.getElementById('hdr-coins').textContent=0;
+    }else{
+      document.getElementById('predict-value').textContent=typeof d.prediction==='number'?d.prediction.toFixed(4):d.prediction;
+      document.getElementById('predict-coins').textContent=`🪙 Coins remaining: ${d['coins left']}`;
+      document.getElementById('res-predict').className='result-box show info';
+      document.getElementById('hdr-coins').textContent=d['coins left'];
+      toast('Prediction complete!','success');
+    }
+  }catch(e){toast('Cannot reach server','error');}
+  finally{setLoading('btn-predict',false);}
+}
+
+// ── ACCURACY ──────────────────────────────────────
+async function getAccuracy(){
+  document.getElementById('res-acc').className='result-box';
+  try{
+    const res=await fetch(`${API}/models/acc`,{headers:authHeaders()});
+    const d=await res.json();
+    if(!res.ok){toast(d.detail||'No model found','error');return;}
+    let accVal=null;
+    if(typeof d==='number'){accVal=d;}
+    else if(typeof d==='object'){
+      const raw=Object.values(d)[0];
+      if(typeof raw==='number'){accVal=raw;}
+      else if(typeof raw==='string'){const match=raw.match(/[\d.]+/);accVal=match?parseFloat(match[0]):raw;}
+    }
+    document.getElementById('acc-value').textContent=typeof accVal==='number'?accVal.toFixed(6):String(accVal);
+    document.getElementById('res-acc').className='result-box show info';
+    toast('Score loaded','success');
+  }catch(e){toast('Cannot reach server','error');}
+}
+
+// ── BUY COINS ─────────────────────────────────────
+async function doBuyCoins(){
+  const front=document.getElementById('cc-front').value.replace(/\s/g,'');
+  const expire=document.getElementById('cc-expire').value.trim();
+  const back=document.getElementById('cc-back').value.trim();
+
+  if(front.length!==16||!/^\d+$/.test(front)){toast('Card number must be exactly 16 digits','error');return;}
+  if(!/^\d{2}[\/\.]\d{2}$/.test(expire)){toast('Expiry must be MM/YY or MM.YY','error');return;}
+  if(back.length!==3||!/^\d+$/.test(back)){toast('CVV must be exactly 3 digits','error');return;}
+
+  setLoading('btn-coins',true);
+  document.getElementById('res-coins').className='result-box';
+  try{
+    const res=await fetch(`${API}/users/buy_coins`,{method:'POST',headers:authHeaders(),body:JSON.stringify({front_digits:front,expire_digits:expire,back_digits:back})});
+    const d=await res.json();
+    if(!res.ok){
+      document.getElementById('res-coins-msg').textContent=d.detail||'Purchase failed';
+      document.getElementById('res-coins').className='result-box show error';
+      toast(d.detail||'Purchase failed','error');
+    }else{
+      document.getElementById('res-coins-msg').innerHTML=`<strong>✅ ${d.message}</strong>`;
+      document.getElementById('res-coins').className='result-box show success';
+      toast('10 coins added!','success');
+      const match=d.message.match(/coins left[:\s]+(\d+)/i);
+      if(match) document.getElementById('hdr-coins').textContent=match[1];
+      document.getElementById('cc-front').value='';
+      document.getElementById('cc-expire').value='';
+      document.getElementById('cc-back').value='';
+      loadUserInfo();
+    }
+  }catch(e){toast('Cannot reach server','error');}
+  finally{setLoading('btn-coins',false);}
+}
+
+// ── Card formatters ───────────────────────────────
+function formatCardNumber(input){let v=input.value.replace(/\D/g,'').slice(0,16);input.value=v.replace(/(.{4})/g,'$1 ').trim();}
+function formatExpiry(input){let v=input.value.replace(/\D/g,'').slice(0,4);if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);input.value=v;}
+</script>
+</body>
+</html>
