@@ -1,4 +1,13 @@
+# created by virtualenv automatically
 .idea/
 .venv/
 __pycache__/
 .env
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# SQL files
+*.sql
