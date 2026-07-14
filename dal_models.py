@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from db_functions import clear_folder,count_files,read_db
+from db_functions import clear_folder,count_files,read_db,remove_model_from_dir
 import sqlite3
 
 DB_NAME_MODELS = "models.db"
@@ -106,6 +106,7 @@ def dm_delete_model_by_model_name(user_name:str,db_name)->dict|None:
         with get_connection(db_name) as conn:
             conn.execute(query, (user_name,))
             conn.commit()
+            remove_model_from_dir(user_name)
             return existing_model
 
     except sqlite3.OperationalError:

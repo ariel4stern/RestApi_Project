@@ -2,7 +2,13 @@ import shutil
 import sqlite3
 import pandas as pd
 import os
-
+def remove_model_from_dir(model_name):
+    model_path = os.path.join(os.getcwd(), "models","saved_models",f"{model_name}.pkl")
+    try:
+        os.remove(model_path)
+    except Exception as e:
+        print(e)
+    print(f"removing {model_path}")
 
 def read_db(table_name:str)->list[dict]|None:
     try:
